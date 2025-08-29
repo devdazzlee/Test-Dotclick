@@ -1,11 +1,6 @@
 # Dependencies
 node_modules/
 
-# Development files
-src/
-tsconfig.json
-*.ts
-
 # Environment files
 .env
 .env.local
@@ -42,9 +37,6 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variables file
-.env
-
 # IDE files
 .vscode/
 .idea/
@@ -66,3 +58,6 @@ Thumbs.db
 
 # README
 README.md
+
+# Exclude source files after build (they're not needed in the final deployment)
+# But keep them during build process
