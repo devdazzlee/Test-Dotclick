@@ -73,14 +73,27 @@ export const productSchema = z.object({
     .min(1, 'Product name is required')
     .max(100, 'Product name cannot exceed 100 characters')
     .trim(),
+  slug: z
+    .string()
+    .min(1, 'Product slug is required')
+    .max(100, 'Product slug cannot exceed 100 characters')
+    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
+    .trim()
+    .optional(), // Made optional since it can be auto-generated
   description: z
     .string()
     .min(1, 'Product description is required')
     .max(2000, 'Product description cannot exceed 2000 characters'),
   tags: z.array(z.string().trim()).optional(),
   price: z
-    .number()
-    .min(0, 'Price cannot be negative'),
+    .string()
+    .min(1, 'Price is required')
+    .transform((val) => {
+      const num = parseFloat(val);
+      if (isNaN(num)) throw new Error('Price must be a valid number');
+      return num;
+    })
+    .pipe(z.number().min(0, 'Price cannot be negative')),
   colour: z
     .string()
     .min(1, 'Product colour is required')
@@ -88,10 +101,16 @@ export const productSchema = z.object({
   size: z.enum(['sm', 'md', 'lg', 'xl']),
   images: z
     .array(z.string())
-    .min(1, 'At least one product image is required'),
+    .optional(), // Made optional since images can come from file uploads
   totalStock: z
-    .number()
-    .min(0, 'Total stock cannot be negative'),
+    .string()
+    .min(1, 'Total stock is required')
+    .transform((val) => {
+      const num = parseInt(val);
+      if (isNaN(num)) throw new Error('Total stock must be a valid number');
+      return num;
+    })
+    .pipe(z.number().min(0, 'Total stock cannot be negative')),
 });
 
 // Cart item validation schema

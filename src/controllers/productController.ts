@@ -1,26 +1,71 @@
 import { Request, Response } from 'express';
 import { Product } from '../models/Product';
-import { sendSuccess, sendBadRequest, sendNotFound } from '../utils/response';
+import { sendSuccess, sendBadRequest, sendNotFound, sendError } from '../utils/response';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { productSchema, paginationSchema } from '../utils/validation';
+import { CloudinaryService } from '../services/cloudinary';
 
 // Create product (Admin only)
 export const createProduct = asyncHandler(async (req: Request, res: Response) => {
   // Validate request body
   const validatedData = productSchema.parse(req.body);
 
-  // Check if product with same slug exists
-  const existingProduct = await Product.findOne({ slug: validatedData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
-  
+    // Generate or use provided slug
+  let slug: string;
+  if (validatedData.slug) {
+    // Use provided slug
+    slug = validatedData.slug.toLowerCase().trim();
+    
+    // Check if slug already exists
+    const existingProductWithSlug = await Product.findOne({ slug });
+    if (existingProductWithSlug) {
+      sendBadRequest(res, 'Product with this slug already exists');
+      return;
+    }
+  } else {
+    // Auto-generate slug from name
+    slug = validatedData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    
+    // Check if auto-generated slug already exists
+    const existingProduct = await Product.findOne({ slug });
   if (existingProduct) {
     sendBadRequest(res, 'Product with this name already exists');
+      return;
+    }
+  }
+
+  // Determine images from uploaded files or request body
+  let images: string[] = [];
+  
+  if (Array.isArray(req.files) && req.files.length > 0) {
+    try {
+      // Upload images to Cloudinary (following the same pattern as profile images)
+      const uploadPromises = req.files.map((file: any) => 
+        CloudinaryService.uploadImage(file, 'products')
+      );
+      const uploadResults = await Promise.all(uploadPromises);
+      images = uploadResults.map(result => result.secure_url);
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      sendError(res, 'Failed to upload images', 500);
+      return;
+    }
+  } else if (validatedData.images && Array.isArray(validatedData.images) && validatedData.images.length > 0) {
+    // Images provided in request body (URLs)
+    images = validatedData.images;
+  }
+
+  // Ensure at least one image is provided
+  if (images.length === 0) {
+    sendBadRequest(res, 'At least one product image is required');
     return;
   }
 
   // Create new product
   const product = new Product({
     ...validatedData,
-    images: Array.isArray(req.files) ? req.files.map((file: any) => file.path) : validatedData.images,
+    slug,
+    images,
   });
 
   await product.save();
@@ -152,7 +197,30 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
   
   // Update images if new files are uploaded
   if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-    product.images = req.files.map((file: any) => file.path);
+    try {
+      // Delete old images from Cloudinary if they exist (following profile pattern)
+      if (product.images && product.images.length > 0) {
+        for (const imageUrl of product.images) {
+          if (imageUrl.includes('cloudinary')) {
+            const oldPublicId = CloudinaryService.getPublicIdFromUrl(imageUrl);
+            if (oldPublicId) {
+              await CloudinaryService.deleteImage(oldPublicId);
+            }
+          }
+        }
+      }
+
+      // Upload new images to Cloudinary
+      const uploadPromises = req.files.map((file: any) => 
+        CloudinaryService.uploadImage(file, 'products')
+      );
+      const uploadResults = await Promise.all(uploadPromises);
+      product.images = uploadResults.map(result => result.secure_url);
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      sendError(res, 'Failed to upload images', 500);
+      return;
+    }
   }
 
   await product.save();
@@ -164,12 +232,32 @@ export const updateProduct = asyncHandler(async (req: Request, res: Response) =>
 export const deleteProduct = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
-  const product = await Product.findByIdAndDelete(id);
+  const product = await Product.findById(id);
 
   if (!product) {
     sendNotFound(res, 'Product not found');
     return;
   }
+
+  // Delete images from Cloudinary if they exist (following profile pattern)
+  if (product.images && product.images.length > 0) {
+    try {
+      for (const imageUrl of product.images) {
+        if (imageUrl.includes('cloudinary')) {
+          const publicId = CloudinaryService.getPublicIdFromUrl(imageUrl);
+          if (publicId) {
+            await CloudinaryService.deleteImage(publicId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete images from Cloudinary:', error);
+      // Continue with product deletion even if image deletion fails
+    }
+  }
+
+  // Delete the product
+  await Product.findByIdAndDelete(id);
 
   sendSuccess(res, null, 'Product deleted successfully');
 });

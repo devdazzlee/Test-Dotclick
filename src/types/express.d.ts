@@ -8,6 +8,7 @@ declare global {
         email: string;
         role: string;
       };
+      files?: Express.Multer.File[];
     }
   }
 }

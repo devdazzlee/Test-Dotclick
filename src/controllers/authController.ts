@@ -5,6 +5,7 @@ import { sendSuccess, sendBadRequest, sendError } from '../utils/response';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { registerSchema, registerWithRoleSchema, loginSchema } from '../utils/validation';
 import { env } from '../config/environment';
+import { CloudinaryService } from '../services/cloudinary';
 
 // Generate JWT token
 const generateToken = (id: string): string => {
@@ -37,23 +38,36 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  // Handle profile image upload to Cloudinary
+  let profileImageUrl = null;
+  if (req.file) {
+    try {
+      const uploadResult = await CloudinaryService.uploadImage(req.file, 'profiles');
+      profileImageUrl = uploadResult.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      sendError(res, 'Failed to upload image', 500);
+      return;
+    }
+  }
+
   // Create new user
   const user = new User({
     username: validatedData.username,
     email: validatedData.email,
     password: validatedData.password,
     phone: validatedData.phone,
-    profileImage: req.file?.path || null,
+    profileImage: profileImageUrl,
   });
 
   await user.save();
 
   // Generate token
-  const token = generateToken((user._id as string).toString());
+  const token = generateToken((user as any)._id.toString());
 
   // Remove password from response
   const userResponse = {
-    id: user._id as string,
+    id: (user as any)._id,
     username: user.username,
     email: user.email,
     phone: user.phone,
@@ -86,13 +100,26 @@ export const registerWithRole = asyncHandler(async (req: Request, res: Response)
     }
   }
 
+  // Handle profile image upload to Cloudinary
+  let profileImageUrl = null;
+  if (req.file) {
+    try {
+      const uploadResult = await CloudinaryService.uploadImage(req.file, 'profiles');
+      profileImageUrl = uploadResult.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      sendError(res, 'Failed to upload image', 500);
+      return;
+    }
+  }
+
   // Create new user with specified role
   const user = new User({
     username: validatedData.username,
     email: validatedData.email,
     password: validatedData.password,
     phone: validatedData.phone,
-    profileImage: req.file?.path || null,
+    profileImage: profileImageUrl,
     role: validatedData.role,
   });
 
@@ -232,13 +259,33 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
   // Update fields
   if (username) user.username = username;
   if (phone) user.phone = phone;
-  if (req.file?.path) user.profileImage = req.file.path;
+  
+  // Handle profile image upload to Cloudinary
+  if (req.file) {
+    try {
+      // Delete old image from Cloudinary if it exists
+      if (user.profileImage && user.profileImage.includes('cloudinary')) {
+        const oldPublicId = CloudinaryService.getPublicIdFromUrl(user.profileImage);
+        if (oldPublicId) {
+          await CloudinaryService.deleteImage(oldPublicId);
+        }
+      }
+
+      // Upload new image to Cloudinary
+      const uploadResult = await CloudinaryService.uploadImage(req.file, 'profiles');
+      user.profileImage = uploadResult.secure_url;
+    } catch (error) {
+      console.error('Cloudinary upload error:', error);
+      sendError(res, 'Failed to upload image', 500);
+      return;
+    }
+  }
 
   await user.save();
 
   // Remove password from response
   const userResponse = {
-    id: user._id,
+    id: (user as any)._id,
     username: user.username,
     email: user.email,
     phone: user.phone,
