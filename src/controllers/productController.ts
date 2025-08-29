@@ -66,6 +66,7 @@ export const createProduct = asyncHandler(async (req: Request, res: Response) =>
     ...validatedData,
     slug,
     images,
+    role: req.user?.role || 'user', // Set role based on user creating the product
   });
 
   await product.save();

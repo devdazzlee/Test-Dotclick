@@ -1,0 +1,25 @@
+# Vercel Environment Variables
+# Copy these to your Vercel project settings
+
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_change_in_production
+JWT_EXPIRES_IN=7d
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+
+# API Configuration
+API_PREFIX=/api/v1
+
+# Database Configuration (MongoDB Atlas recommended for production)
+DATABASE_URL=your_mongodb_atlas_connection_string

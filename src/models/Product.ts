@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   inStock: boolean;
   totalStock: number;
   soldCount: number;
+  role: 'admin' | 'user';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +71,11 @@ const productSchema = new Schema<IProduct>({
     type: Number,
     default: 0,
     min: [0, 'Sold count cannot be negative'],
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'user'],
+    default: 'user',
   },
 }, {
   timestamps: true,

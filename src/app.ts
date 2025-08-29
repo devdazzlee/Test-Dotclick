@@ -21,8 +21,10 @@ const initializeMiddlewares = (app: Application): void => {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Static file serving for uploads
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  // Static file serving for uploads (only in development)
+  if (env.NODE_ENV !== 'production') {
+    app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  }
 
   // Request logging
   app.use(logger);
@@ -51,6 +53,7 @@ const initializeRoutes = (app: Application): void => {
         products: `${env.API_PREFIX}/products`,
         cart: `${env.API_PREFIX}/cart`,
         orders: `${env.API_PREFIX}/orders`,
+        favorites: `${env.API_PREFIX}/favorites`,
       }
     });
   });
@@ -97,7 +100,9 @@ const startServer = (app: Application): void => {
     console.log(`📊 Environment: ${env.NODE_ENV}`);
     console.log(`🔗 API Base URL: http://localhost:${env.PORT}${env.API_PREFIX}`);
     console.log(`🏥 Health Check: http://localhost:${env.PORT}${env.API_PREFIX}/health`);
-    console.log(`📁 Uploads: http://localhost:${env.PORT}/uploads`);
+    if (env.NODE_ENV !== 'production') {
+      console.log(`📁 Uploads: http://localhost:${env.PORT}/uploads`);
+    }
   });
 };
 

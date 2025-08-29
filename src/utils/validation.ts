@@ -111,6 +111,7 @@ export const productSchema = z.object({
       return num;
     })
     .pipe(z.number().min(0, 'Total stock cannot be negative')),
+  role: z.enum(['admin', 'user']).optional().default('user'),
 });
 
 // Cart item validation schema
