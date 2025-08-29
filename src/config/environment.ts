@@ -9,7 +9,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).pipe(z.number().min(1).max(65535)).default(() => 3000),
   API_PREFIX: z.string().default('/api/v1'),
-  DATABASE_URL: z.string().optional(),
+  MONGODB_URL: z.string().optional(),
   JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters').default('your-super-secret-jwt-key-change-in-production'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),

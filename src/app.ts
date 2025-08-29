@@ -93,6 +93,16 @@ const createApp = async (): Promise<Application> => {
   return app;
 };
 
+// Create app instance for testing (without starting server)
+let appInstance: Application | null = null;
+
+const getApp = async (): Promise<Application> => {
+  if (!appInstance) {
+    appInstance = await createApp();
+  }
+  return appInstance;
+};
+
 // Start server
 const startServer = (app: Application): void => {
   app.listen(env.PORT, () => {
@@ -106,4 +116,4 @@ const startServer = (app: Application): void => {
   });
 };
 
-export { createApp, startServer };
+export { createApp, startServer, getApp };

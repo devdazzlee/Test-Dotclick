@@ -3,7 +3,7 @@ import { env } from './environment';
 
 export const connectDatabase = async (): Promise<void> => {
   try {
-    const mongoUri = env.DATABASE_URL || 'mongodb://127.0.0.1:27017/ecommerce-store';
+    const mongoUri = env.MONGODB_URL || 'mongodb://127.0.0.1:27017/ecommerce-store';
     
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
